@@ -2,6 +2,7 @@ const fs = require("fs-extra");
 const path = require("path");
 const { execSync } = require("child_process");
 const ora = require("ora");
+const createReadme = require("./readme");
 
 // 🔹 Decide template name based on user input
 function getTemplateName(backend, language) {
@@ -45,7 +46,8 @@ async function createProjectStructure(answers) {
 
     // 📁 Copy template
     await fs.copy(templatePath, projectPath);
-
+    // 📝 Create README.md
+    await createReadme(projectPath, answers);
     // 🔄 Replace placeholders in package.json
     const packageJsonPath = path.join(projectPath, "package.json");
 
