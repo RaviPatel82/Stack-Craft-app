@@ -1,5 +1,7 @@
 const fs = require("fs-extra");
 const path = require("path");
+const { execSync } = require("child_process");
+const ora = require("ora");
 
 async function createProjectStructure(answers) {
     const { projectName, prettier } = answers;
@@ -55,6 +57,25 @@ async function createProjectStructure(answers) {
         );
     }
 
+    // Move into project directory
+    process.chdir(projectPath);
+
+    // Spinner start
+    const spinner = ora("Installing dependencies...").start();
+
+    try {
+        // Install base dependencies
+        execSync("npm install", { stdio: "ignore" });
+
+        // Install Prettier if selected
+        if (prettier) {
+            execSync("npm install -D prettier", { stdio: "ignore" });
+        }
+
+        spinner.succeed("Dependencies installed successfully!");
+    } catch (error) {
+        spinner.fail("Failed to install dependencies");
+    }
     console.log(`\n📁 Project created at: ${projectPath}`);
 }
 
