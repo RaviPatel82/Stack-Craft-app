@@ -3,68 +3,73 @@ const path = require("path");
 const { execSync } = require("child_process");
 const ora = require("ora");
 
+// 🔹 Decide template name based on user input
+function getTemplateName(backend, language) {
+    const lang = language === "TypeScript" ? "ts" : "js";
+
+    if (backend === "Express") {
+        return `express-${lang}`;
+    }
+
+    if (backend === "NestJS") {
+        return `nest-${lang}`;
+    }
+
+    throw new Error("Unsupported stack");
+}
+
+// 🔹 Main generator function
 async function createProjectStructure(answers) {
-    const { projectName, prettier } = answers;
+    const { projectName, prettier, backend, language } = answers;
 
     const projectPath = path.join(process.cwd(), projectName);
 
-    // Check if folder already exists
+    // ❌ Check if folder already exists
     if (fs.existsSync(projectPath)) {
         console.log("❌ Folder already exists. Choose a different name.");
         process.exit(1);
     }
 
-    // Create root folder
-    await fs.mkdir(projectPath);
+    // 📦 Get template name
+    const templateName = getTemplateName(backend, language);
 
-    // Create package.json
-    const packageJson = {
-        name: projectName,
-        version: "1.0.0",
-        main: "index.js",
-        scripts: {
-            start: "node index.js",
-        },
-    };
-    await fs.writeJson(path.join(projectPath, "package.json"), packageJson, {
-        spaces: 2,
-    });
+    const templatePath = path.join(__dirname, `../templates/${templateName}`);
 
-    // Create index.js
-    const indexContent = `console.log("Hello, ${projectName}!");`;
-    await fs.writeFile(path.join(projectPath, "index.js"), indexContent);
-
-    // Create gitignore
-    const gitignoreContent = `node_modules/\ndist/\n.env\n`;
-    await fs.writeFile(path.join(projectPath, ".gitignore"), gitignoreContent);
-
-    // Add pretteier if selected
-    if (prettier) {
-        const prettierConfig = {
-            semi: true,
-            singleQuote: true,
-            trailingComma: "es5",
-        };
-        await fs.writeJson(
-            path.join(projectPath, ".prettierrc"),
-            prettierConfig,
-            { spaces: 2 },
-        );
-        const prettierignore = `node_modules/\ndist/\nbuild/\n`;
-        await fs.writeFile(
-            path.join(projectPath, ".prettierignore"),
-            prettierignore,
-        );
+    // ❌ Check if template exists
+    if (!fs.existsSync(templatePath)) {
+        console.log(`❌ Template "${templateName}" not found`);
+        process.exit(1);
     }
 
-    // Move into project directory
+    console.log("\n🚀 Creating your project...\n");
+
+    // 📁 Copy template
+    await fs.copy(templatePath, projectPath);
+
+    // 🔄 Replace placeholders in package.json
+    const packageJsonPath = path.join(projectPath, "package.json");
+
+    if (fs.existsSync(packageJsonPath)) {
+        let content = await fs.readFile(packageJsonPath, "utf-8");
+
+        content = content.replace(/__PROJECT_NAME__/g, projectName);
+
+        await fs.writeFile(packageJsonPath, content);
+    }
+
+    // 🧹 Remove Prettier if user didn't select it
+    if (!prettier) {
+        await fs.remove(path.join(projectPath, ".prettierrc"));
+        await fs.remove(path.join(projectPath, ".prettierignore"));
+    }
+
+    // 📦 Install dependencies
     process.chdir(projectPath);
 
-    // Spinner start
     const spinner = ora("Installing dependencies...").start();
 
     try {
-        // Install base dependencies
+        // Install base deps
         execSync("npm install", { stdio: "ignore" });
 
         // Install Prettier if selected
@@ -72,11 +77,21 @@ async function createProjectStructure(answers) {
             execSync("npm install -D prettier", { stdio: "ignore" });
         }
 
-        spinner.succeed("Dependencies installed successfully!");
+        spinner.succeed("Project ready 🚀");
     } catch (error) {
-        spinner.fail("Failed to install dependencies");
+        spinner.fail("Installation failed");
+        console.error(error);
     }
-    console.log(`\n📁 Project created at: ${projectPath}`);
+
+    // 🎉 Final message
+    console.log(`
+✅ Project "${projectName}" created successfully!
+
+👉 Next steps:
+  cd ${projectName}
+  npm install
+  npm start
+`);
 }
 
 module.exports = createProjectStructure;
