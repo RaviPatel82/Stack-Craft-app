@@ -1,5 +1,5 @@
-const fs = require("fs-extra");
-const path = require("path");
+import fs from "fs-extra";
+import path from "path";
 
 async function createReadme(projectPath, answers) {
     const { projectName, backend, language } = answers;
@@ -35,4 +35,4 @@ Happy coding! 🎉
     await fs.writeFile(path.join(projectPath, "README.md"), content);
 }
 
-module.exports = createReadme;
+export default createReadme;

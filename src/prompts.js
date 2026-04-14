@@ -1,4 +1,4 @@
-const inquirer = require("inquirer");
+import inquirer from "inquirer";
 
 async function askQuestions() {
     const answers = await inquirer.prompt([
@@ -37,4 +37,4 @@ async function askQuestions() {
     return answers;
 }
 
-module.exports = askQuestions;
+export default askQuestions;

@@ -1,65 +1,86 @@
-const fs = require("fs-extra");
-const path = require("path");
-const { execSync } = require("child_process");
-const ora = require("ora");
-const createReadme = require("./readme");
+import fs from "fs-extra";
+import path from "path";
+import { execSync } from "child_process";
+import ora from "ora";
+import chalk from "chalk";
+import { fileURLToPath } from "url";
 
-// 🔹 Decide template name based on user input
+import createReadme from "./readme.js";
+import createEnvFile from "./env.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 🔹 Decide template name
 function getTemplateName(backend, language) {
     const lang = language === "TypeScript" ? "ts" : "js";
 
-    if (backend === "Express") {
-        return `express-${lang}`;
-    }
-
-    if (backend === "NestJS") {
-        return `nest-${lang}`;
-    }
+    if (backend === "Express") return `express-${lang}`;
+    if (backend === "NestJS") return `nest-${lang}`;
 
     throw new Error("Unsupported stack");
 }
 
-// 🔹 Main generator function
+// 🔹 Replace placeholders in ALL files
+async function replacePlaceholders(dir, projectName) {
+    const files = await fs.readdir(dir);
+
+    for (const file of files) {
+        const filePath = path.join(dir, file);
+        const stat = await fs.stat(filePath);
+
+        if (stat.isDirectory()) {
+            await replacePlaceholders(filePath, projectName);
+        } else {
+            const content = await fs.readFile(filePath, "utf-8");
+
+            if (content.includes("__PROJECT_NAME__")) {
+                const updated = content.replace(
+                    /__PROJECT_NAME__/g,
+                    projectName,
+                );
+                await fs.writeFile(filePath, updated);
+            }
+        }
+    }
+}
+
+// 🔹 Main generator
 async function createProjectStructure(answers) {
-    const { projectName, prettier, backend, language } = answers;
+    const { projectName, prettier, backend, language, database } = answers;
 
     const projectPath = path.join(process.cwd(), projectName);
 
-    // ❌ Check if folder already exists
+    // Check if folder exists
     if (fs.existsSync(projectPath)) {
-        console.log("❌ Folder already exists. Choose a different name.");
+        console.log("❌ Folder already exists. Choose another name.");
         process.exit(1);
     }
 
-    // 📦 Get template name
+    // 📦 Select template
     const templateName = getTemplateName(backend, language);
-
     const templatePath = path.join(__dirname, `../templates/${templateName}`);
 
-    // ❌ Check if template exists
     if (!fs.existsSync(templatePath)) {
         console.log(`❌ Template "${templateName}" not found`);
         process.exit(1);
     }
 
-    console.log("\n🚀 Creating your project...\n");
+    console.log(chalk.cyan("\n🚀 Creating your project...\n"));
 
     // 📁 Copy template
     await fs.copy(templatePath, projectPath);
-    // 📝 Create README.md
+
+    // 🔄 Replace placeholders everywhere
+    await replacePlaceholders(projectPath, projectName);
+
+    // 📄 Generate README
     await createReadme(projectPath, answers);
-    // 🔄 Replace placeholders in package.json
-    const packageJsonPath = path.join(projectPath, "package.json");
 
-    if (fs.existsSync(packageJsonPath)) {
-        let content = await fs.readFile(packageJsonPath, "utf-8");
+    // ⚙️ Generate env file
+    await createEnvFile(projectPath, answers);
 
-        content = content.replace(/__PROJECT_NAME__/g, projectName);
-
-        await fs.writeFile(packageJsonPath, content);
-    }
-
-    // 🧹 Remove Prettier if user didn't select it
+    // 🧹 Remove Prettier if not selected
     if (!prettier) {
         await fs.remove(path.join(projectPath, ".prettierrc"));
         await fs.remove(path.join(projectPath, ".prettierignore"));
@@ -71,10 +92,19 @@ async function createProjectStructure(answers) {
     const spinner = ora("Installing dependencies...").start();
 
     try {
-        // Install base deps
+        // Base install
         execSync("npm install", { stdio: "ignore" });
 
-        // Install Prettier if selected
+        // Database install
+        if (database === "MongoDB") {
+            execSync("npm install mongoose", { stdio: "ignore" });
+        }
+
+        if (database === "PostgreSQL") {
+            execSync("npm install pg", { stdio: "ignore" });
+        }
+
+        // Prettier install
         if (prettier) {
             execSync("npm install -D prettier", { stdio: "ignore" });
         }
@@ -86,14 +116,20 @@ async function createProjectStructure(answers) {
     }
 
     // 🎉 Final message
-    console.log(`
+    console.log(
+        chalk.green(`
 ✅ Project "${projectName}" created successfully!
+`),
+    );
 
+    console.log(
+        chalk.blue(`
 👉 Next steps:
   cd ${projectName}
-  npm install
-  npm start
-`);
+  npm run dev # Start development server
+  npm start # Start production server
+`),
+    );
 }
 
-module.exports = createProjectStructure;
+export default createProjectStructure;
