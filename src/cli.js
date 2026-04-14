@@ -14,7 +14,7 @@ program
         const answers = await askQuestions();
         console.log("\n🚀 Creating your project...\n");
 
-        await createProjectStructure(answers.projectName);
+        await createProjectStructure(answers);
     });
 
 program.parse(process.argv);

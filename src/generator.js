@@ -1,7 +1,9 @@
 const fs = require("fs-extra");
 const path = require("path");
 
-async function createProjectStructure(projectName) {
+async function createProjectStructure(answers) {
+    const { projectName, prettier } = answers;
+
     const projectPath = path.join(process.cwd(), projectName);
 
     // Check if folder already exists
@@ -10,8 +12,48 @@ async function createProjectStructure(projectName) {
         process.exit(1);
     }
 
-    // Create folder
+    // Create root folder
     await fs.mkdir(projectPath);
+
+    // Create package.json
+    const packageJson = {
+        name: projectName,
+        version: "1.0.0",
+        main: "index.js",
+        scripts: {
+            start: "node index.js",
+        },
+    };
+    await fs.writeJson(path.join(projectPath, "package.json"), packageJson, {
+        spaces: 2,
+    });
+
+    // Create index.js
+    const indexContent = `console.log("Hello, ${projectName}!");`;
+    await fs.writeFile(path.join(projectPath, "index.js"), indexContent);
+
+    // Create gitignore
+    const gitignoreContent = `node_modules/\ndist/\n.env\n`;
+    await fs.writeFile(path.join(projectPath, ".gitignore"), gitignoreContent);
+
+    // Add pretteier if selected
+    if (prettier) {
+        const prettierConfig = {
+            semi: true,
+            singleQuote: true,
+            trailingComma: "es5",
+        };
+        await fs.writeJson(
+            path.join(projectPath, ".prettierrc"),
+            prettierConfig,
+            { spaces: 2 },
+        );
+        const prettierignore = `node_modules/\ndist/\nbuild/\n`;
+        await fs.writeFile(
+            path.join(projectPath, ".prettierignore"),
+            prettierignore,
+        );
+    }
 
     console.log(`\n📁 Project created at: ${projectPath}`);
 }
