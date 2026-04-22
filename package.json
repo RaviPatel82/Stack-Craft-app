@@ -1,20 +1,32 @@
 {
-    "name": "stack-craft-cli",
+    "name": "create-stack-craft-app",
     "version": "1.0.0",
-    "type": "module",
-    "main": "index.js",
+    "description": "CLI to generate fullstack backend projects with auth and database setup",
     "bin": {
-        "Stack-Craft-app": "./bin/index.js"
+        "create-stack-app": "bin/index.js"
     },
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+    "files": [
+        "bin",
+        "src",
+        "templates"
+    ],
+    "keywords": [
+        "cli",
+        "scaffold",
+        "boilerplate",
+        "nodejs",
+        "express",
+        "backend",
+        "generator"
+    ],
+    "author": "Ravi Patel",
+    "license": "MIT",
+    "preferGlobal": true,
+    "engines": {
+        "node": ">=16"
     },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
-    "description": "",
     "dependencies": {
-        "chalk": "^5.6.2",
+        "chalk": "^4.1.2",
         "commander": "^14.0.3",
         "fs-extra": "^11.3.4",
         "inquirer": "^8.2.7",
