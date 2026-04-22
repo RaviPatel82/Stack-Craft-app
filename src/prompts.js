@@ -21,6 +21,12 @@ async function askQuestions() {
             choices: ["JavaScript", "TypeScript"],
         },
         {
+            type: "confirm",
+            name: "auth",
+            message: "Add JWT authentication?",
+            default: false,
+        },
+        {
             type: "list",
             name: "database",
             message: "Select database:",

@@ -47,7 +47,8 @@ async function replacePlaceholders(dir, projectName) {
 
 // 🔹 Main generator
 async function createProjectStructure(answers) {
-    const { projectName, prettier, backend, language, database } = answers;
+    const { projectName, prettier, backend, language, database, auth } =
+        answers;
 
     const projectPath = path.join(process.cwd(), projectName);
 
@@ -70,6 +71,40 @@ async function createProjectStructure(answers) {
 
     // 📁 Copy template
     await fs.copy(templatePath, projectPath);
+
+    // 🔐 Add auth feature if selected
+    if (auth && backend === "Express") {
+        const authTemplatePath = path.join(
+            __dirname,
+            "../templates/features/auth-js",
+        );
+
+        const targetPath = path.join(projectPath, "src");
+
+        await fs.copy(authTemplatePath, targetPath);
+    }
+
+    if (auth && backend === "Express") {
+        const routesIndexPath = path.join(projectPath, "src/routes/index.js");
+
+        let content = await fs.readFile(routesIndexPath, "utf-8");
+
+        content =
+            `
+const authRoutes = require('./auth.routes');
+` + content;
+
+        content = content.replace(
+            "module.exports = router;",
+            `
+router.use('/auth', authRoutes);
+
+module.exports = router;
+`,
+        );
+
+        await fs.writeFile(routesIndexPath, content);
+    }
 
     // 🔄 Replace placeholders everywhere
     await replacePlaceholders(projectPath, projectName);
@@ -107,6 +142,10 @@ async function createProjectStructure(answers) {
         // Prettier install
         if (prettier) {
             execSync("npm install -D prettier", { stdio: "ignore" });
+        }
+
+        if (auth) {
+            execSync("npm install jsonwebtoken bcryptjs", { stdio: "ignore" });
         }
 
         spinner.succeed("Project ready 🚀");
