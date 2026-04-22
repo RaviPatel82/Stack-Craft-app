@@ -4,7 +4,7 @@ import path from "path";
 async function createEnvFile(projectPath, answers) {
     const { database } = answers;
 
-    let content = `PORT=3000\n`;
+    let content = `PORT=3000\nJWT_SECRET=your_secret_key\n`;
 
     // Add DB config based on selection
     if (database === "MongoDB") {

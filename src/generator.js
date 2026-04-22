@@ -72,6 +72,22 @@ async function createProjectStructure(answers) {
     // 📁 Copy template
     await fs.copy(templatePath, projectPath);
 
+    //Copy DB templates
+    if (database === "MongoDB") {
+        const dbTemplate = path.join(
+            __dirname,
+            "../templates/features/db-mongo",
+        );
+        await fs.copy(dbTemplate, path.join(projectPath, "src"));
+    }
+
+    if (database === "PostgreSQL") {
+        const dbTemplate = path.join(
+            __dirname,
+            "../templates/features/db-postgres",
+        );
+        await fs.copy(dbTemplate, path.join(projectPath, "src"));
+    }
     // 🔐 Add auth feature if selected
     if (auth && backend === "Express") {
         const authTemplatePath = path.join(
@@ -91,19 +107,41 @@ async function createProjectStructure(answers) {
 
         content =
             `
-const authRoutes = require('./auth.routes');
-` + content;
+        const authRoutes = require('./auth.routes');
+        ` + content;
 
         content = content.replace(
             "module.exports = router;",
             `
-router.use('/auth', authRoutes);
+            router.use('/auth', authRoutes);
 
-module.exports = router;
+            module.exports = router;
 `,
         );
 
         await fs.writeFile(routesIndexPath, content);
+    }
+
+    if (database === "MongoDB") {
+        const indexPath = path.join(projectPath, "src/index.js");
+
+        let content = await fs.readFile(indexPath, "utf-8");
+
+        content =
+            `const connectDB = require('./config/db');\nconnectDB();\n\n` +
+            content;
+
+        await fs.writeFile(indexPath, content);
+    }
+
+    if (database === "PostgreSQL") {
+        const indexPath = path.join(projectPath, "src/index.js");
+
+        let content = await fs.readFile(indexPath, "utf-8");
+
+        content = `require('./config/db');\n\n` + content;
+
+        await fs.writeFile(indexPath, content);
     }
 
     // 🔄 Replace placeholders everywhere
